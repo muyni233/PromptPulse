@@ -1,0 +1,26 @@
+{
+  "name": "prompt-pulse",
+  "version": "1.0.0",
+  "description": "Sleek LLM API Prompt Collector & Proxy Server with Beautiful Dashboard",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  },
+  "keywords": [
+    "llm",
+    "prompt",
+    "collector",
+    "proxy",
+    "logger",
+    "openai",
+    "dashboard"
+  ],
+  "author": "Antigravity",
+  "license": "MIT"
+}

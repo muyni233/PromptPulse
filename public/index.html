@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PromptPulse — 优雅的 Prompt 拦截收集器与网关代理</title>
+  <!-- Google Fonts: Outfit (Brand, Headers) and JetBrains Mono (Code/Prompts) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Core stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+  <!-- FontAwesome for Premium Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-icon">
+          <i class="fa-solid fa-bolt-lightning text-glow"></i>
+        </div>
+        <div class="logo-text">
+          <h1>Prompt<span>Pulse</span></h1>
+          <span class="badge badge-primary">v1.0.0</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-menu">
+        <button class="nav-item active" data-tab="logs">
+          <i class="fa-solid fa-list-check"></i>
+          <span>实时日志</span>
+        </button>
+        <button class="nav-item" data-tab="analytics">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>系统分析</span>
+        </button>
+        <button class="nav-item" data-tab="playground">
+          <i class="fa-solid fa-terminal"></i>
+          <span>接口测试</span>
+        </button>
+        <button class="nav-item" data-tab="settings">
+          <i class="fa-solid fa-sliders"></i>
+          <span>全局设置</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="status-indicator">
+          <span class="status-dot online"></span>
+          <span class="status-label">网关运行中</span>
+        </div>
+        <div class="quick-info">
+          <p>当前端口: <code id="lbl-port">3000</code></p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Top header bar -->
+      <header class="top-bar">
+        <div class="header-search">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="global-search" placeholder="快速搜索 Prompt 文本、模型名称、状态码..." autocomplete="off">
+        </div>
+        
+        <div class="header-actions">
+          <button id="btn-refresh" class="btn btn-secondary btn-icon-only" title="刷新控制台">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </button>
+          
+          <div class="auth-status-container" id="auth-indicator" style="display: none;">
+            <span class="badge badge-accent"><i class="fa-solid fa-lock"></i> 控制台密码保护</span>
+          </div>
+
+          <div class="user-profile">
+            <div class="avatar">P</div>
+            <span class="profile-name">开发者控制台</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Tab Sections -->
+      <div class="content-body">
+        
+        <!-- SECTION 1: LOGS FEED -->
+        <section id="tab-logs" class="tab-pane active">
+          <div class="section-header">
+            <div>
+              <h2>抓取日志明细</h2>
+              <p class="subtitle">由 PromptPulse 实时拦截、分析并记录的 LLM 请求与响应明细</p>
+            </div>
+            <div class="action-row">
+              <div class="filter-group">
+                <select id="filter-model" class="form-select">
+                  <option value="">全部模型</option>
+                </select>
+                <select id="filter-status" class="form-select">
+                  <option value="">全部状态</option>
+                  <option value="success">成功响应 (2xx)</option>
+                  <option value="error">失败响应 (4xx/5xx)</option>
+                </select>
+              </div>
+              <button id="btn-clear-logs" class="btn btn-danger">
+                <i class="fa-regular fa-trash-can"></i>
+                <span>清空日志</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Logs Feed Container -->
+          <div class="logs-feed-container">
+            <div class="logs-list-wrapper">
+              <div class="logs-list-header">
+                <div>模型与日期</div>
+                <div>Prompt 拦截摘要</div>
+                <div>状态码</div>
+                <div class="text-right">耗时与 Token 指标</div>
+              </div>
+              
+              <div id="logs-list" class="logs-list">
+                <!-- Log cards will be injected dynamically -->
+                <div class="loading-placeholder">
+                  <div class="pulse-line" style="width: 100%; height: 60px; margin-bottom: 12px; border-radius: 8px;"></div>
+                  <div class="pulse-line" style="width: 100%; height: 60px; margin-bottom: 12px; border-radius: 8px;"></div>
+                  <div class="pulse-line" style="width: 100%; height: 60px; border-radius: 8px;"></div>
+                </div>
+              </div>
+              
+              <!-- Pagination -->
+              <div class="pagination-container">
+                <span id="pagination-info" class="pagination-info">正在载入日志数据...</span>
+                <div class="pagination-buttons">
+                  <button id="btn-prev-page" class="btn btn-secondary btn-sm" disabled><i class="fa-solid fa-chevron-left"></i> 上一页</button>
+                  <button id="btn-next-page" class="btn btn-secondary btn-sm" disabled>下一页 <i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 2: ANALYTICS -->
+        <section id="tab-analytics" class="tab-pane">
+          <div class="section-header">
+            <div>
+              <h2>系统运行分析</h2>
+              <p class="subtitle">系统运行累计指标、Token 消耗统计、响应延迟分析与流量走势趋势</p>
+            </div>
+          </div>
+
+          <!-- Metrics Cards Grid -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon bg-indigo-tint">
+                <i class="fa-solid fa-network-wired text-indigo"></i>
+              </div>
+              <div class="stat-data">
+                <span class="stat-label">累计接口调用</span>
+                <h3 id="stat-total-calls">0</h3>
+                <span class="stat-subtext" id="stat-success-rate">0% 成功率</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon bg-gold-tint">
+                <i class="fa-solid fa-coins text-gold"></i>
+              </div>
+              <div class="stat-data">
+                <span class="stat-label">已拦截 Token 总数</span>
+                <h3 id="stat-total-tokens">0</h3>
+                <span class="stat-subtext" id="stat-token-split">0 输入 • 0 输出</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon bg-emerald-tint">
+                <i class="fa-solid fa-gauge-high text-emerald"></i>
+              </div>
+              <div class="stat-data">
+                <span class="stat-label">平均响应延迟</span>
+                <h3 id="stat-avg-latency">0 ms</h3>
+                <span class="stat-subtext">极速本地网关代理</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon bg-crimson-tint">
+                <i class="fa-solid fa-triangle-exclamation text-crimson"></i>
+              </div>
+              <div class="stat-data">
+                <span class="stat-label">异常失败请求</span>
+                <h3 id="stat-failed-requests">0</h3>
+                <span class="stat-subtext" id="stat-fail-percentage">0% 失败率</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Row -->
+          <div class="charts-row">
+            <!-- Chart 1: Request Volume -->
+            <div class="chart-card flex-2">
+              <div class="chart-header">
+                <h3>接口调用流量走势（最近 7 天）</h3>
+              </div>
+              <div class="chart-container" id="volume-chart-container">
+                <!-- SVG Area -->
+              </div>
+            </div>
+
+            <!-- Chart 2: Model Distribution -->
+            <div class="chart-card flex-1">
+              <div class="chart-header">
+                <h3>模型使用占比排行统计</h3>
+              </div>
+              <div class="model-list-container" id="model-list-container">
+                <!-- List will be injected dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <div class="charts-row">
+            <!-- Latency Table -->
+            <div class="chart-card flex-full">
+              <div class="chart-header">
+                <h3>最近请求响应耗时分布图</h3>
+              </div>
+              <div class="latency-grid-wrapper">
+                <div class="latency-timeline" id="latency-timeline-container">
+                  <!-- Latency plots -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 3: PLAYGROUND -->
+        <section id="tab-playground" class="tab-pane">
+          <div class="section-header">
+            <div>
+              <h2>API 代理测试沙盒</h2>
+              <p class="subtitle">直接在本控制台向本地代理接口提交 Prompt，以便实时观察数据劫持与流式返回效果</p>
+            </div>
+          </div>
+
+          <div class="playground-layout">
+            <!-- Form Parameters -->
+            <div class="pg-panel pg-controls">
+              <h3>测试运行参数</h3>
+              
+
+              <div class="form-group">
+                <label for="pg-upstream-key">动态覆盖上游 API 密钥 (Key)</label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-key"></i>
+                  <input type="password" id="pg-upstream-key" class="form-control" placeholder="sk-...">
+                </div>
+                <span class="form-help">留空则代表使用全局配置的上游 API 密钥</span>
+              </div>
+
+              <hr class="divider">
+
+              <div class="form-group">
+                <label for="pg-model">请求模型标识 (Model)</label>
+                <input type="text" id="pg-model" class="form-control" placeholder="gpt-4o-mini" value="gpt-4o-mini">
+              </div>
+
+              <div class="row-2">
+                <div class="form-group">
+                  <label for="pg-temperature">温度参数 (Temp)</label>
+                  <input type="number" id="pg-temperature" class="form-control" min="0" max="2" step="0.1" value="0.7">
+                </div>
+                <div class="form-group">
+                  <label for="pg-max-tokens">最大 Token 数 (Max)</label>
+                  <input type="number" id="pg-max-tokens" class="form-control" min="1" max="8192" value="1024">
+                </div>
+              </div>
+
+              <div class="form-group form-switch">
+                <input type="checkbox" id="pg-stream" checked>
+                <label for="pg-stream">启用 SSE 打字机流式输出 <span class="badge badge-accent">SSE Stream</span></label>
+              </div>
+
+              <button id="pg-btn-submit" class="btn btn-primary btn-full">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>开始执行代理请求</span>
+              </button>
+            </div>
+
+            <!-- Workspace Messages / Terminal Output -->
+            <div class="pg-panel pg-workspace">
+              <div class="pg-workspace-header">
+                <h3>Chat 消息上下文编辑器</h3>
+                <button id="pg-btn-clear-chat" class="btn btn-secondary btn-xs"><i class="fa-regular fa-trash-can"></i> 重置输入</button>
+              </div>
+
+              <div class="messages-editor" id="pg-messages-container">
+                <!-- System prompt message -->
+                <div class="msg-box system">
+                  <div class="msg-box-header">
+                    <span class="msg-role"><i class="fa-solid fa-gears"></i> 系统级角色预设提示 (SYSTEM)</span>
+                  </div>
+                  <textarea class="msg-text" id="pg-system-input" placeholder="例如：你是一个得力的 AI 助手。"></textarea>
+                </div>
+
+                <!-- User message -->
+                <div class="msg-box user">
+                  <div class="msg-box-header">
+                    <span class="msg-role"><i class="fa-solid fa-user"></i> 用户提问消息 (USER)</span>
+                  </div>
+                  <textarea class="msg-text" id="pg-user-input" placeholder="在此输入您的提问 Prompt... 体验秒级拦截抓取！"></textarea>
+                </div>
+              </div>
+
+              <div class="pg-output-header">
+                <h3>代理流式响应终端 (Hacker Terminal)</h3>
+                <div class="stream-stats" id="pg-stream-stats" style="visibility: hidden;">
+                  <span id="pg-lbl-tokens">0 tokens</span> • <span id="pg-lbl-duration">0ms</span>
+                </div>
+              </div>
+              
+              <div class="pg-terminal" id="pg-terminal-output">
+                <div class="terminal-placeholder">
+                  <i class="fa-solid fa-chevron-right"></i> 等待任务提交。LLM 的实时响应数据流将在本控制台终端中实时打字输出...
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 4: SETTINGS -->
+        <section id="tab-settings" class="tab-pane">
+          <div class="section-header">
+            <div>
+              <h2>网关全局配置</h2>
+              <p class="subtitle">设置代理服务默认的上游路由接口、管理服务器密钥凭证以及安全隔离防护</p>
+            </div>
+          </div>
+
+          <div class="settings-layout">
+            <div class="settings-card">
+              <h3><i class="fa-solid fa-share-from-square text-indigo"></i> 默认 OpenAI 兼容上游目标接口设定</h3>
+              <p class="description">当第三方客户端发送 OpenAI 格式请求（`/v1/chat/completions`）且未包含自定义上游密钥时，PromptPulse 将默认转发到以下预设上游并应用此默认密钥。</p>
+              
+              <div class="form-group">
+                <label for="set-default-url">默认上游 API 地址</label>
+                <input type="text" id="set-default-url" class="form-control" placeholder="https://api.openai.com/v1">
+                <span class="form-help">符合 OpenAI 兼容标准的 API 根地址。例如 <code>https://api.deepseek.com/v1</code>、<code>https://api.openai.com/v1</code></span>
+              </div>
+
+              <div class="form-group">
+                <label for="set-default-key">默认上游 API 密钥 (API Key)</label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-key"></i>
+                  <input type="password" id="set-default-key" class="form-control" placeholder="未配置任何默认密钥（通常针对公开的本地部署节点）">
+                </div>
+                <span class="form-help">通常以 <code>sk-</code> 开头。密钥已经过安全掩码脱敏存储。</span>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <h3><i class="fa-brands fa-google text-indigo"></i> 默认 Google Gemini 上游目标接口设定</h3>
+              <p class="description">当第三方客户端发送 Gemini 格式请求（`/v1beta/models/...`）且未在 URL 中提供自定义 API 密钥参数时，PromptPulse 将默认路由转发到以下预设 Gemini 节点并应用此密钥。</p>
+              
+              <div class="form-group">
+                <label for="set-gemini-url">默认 Gemini API 地址</label>
+                <input type="text" id="set-gemini-url" class="form-control" placeholder="https://generativelanguage.googleapis.com">
+                <span class="form-help">Google Gemini API 根地址。例如 <code>https://generativelanguage.googleapis.com</code></span>
+              </div>
+
+              <div class="form-group">
+                <label for="set-gemini-key">默认 Gemini API 密钥 (API Key)</label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-key"></i>
+                  <input type="password" id="set-gemini-key" class="form-control" placeholder="未配置任何默认密钥（使用本地 Mock 或公开节点）">
+                </div>
+                <span class="form-help">您的 Google AI Studio API 密钥。密钥已经过安全掩码脱敏存储。</span>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <h3><i class="fa-solid fa-user-shield text-emerald"></i> 控制面板安全认证密码 (Dashboard Password)</h3>
+              <p class="description">保护您的 Web 控制台。如果设置了此密码，任何人在加载日志明细、数据指标和网关设置前都必须先在登录门禁中进行验证。</p>
+              
+              <div class="form-group">
+                <label for="set-dashboard-password">控制面板登录密码</label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-lock"></i>
+                  <input type="password" id="set-dashboard-password" class="form-control" placeholder="当前留空代表公共控制台（无安全认证，不推荐公网部署）">
+                </div>
+                <span class="form-help">密码已经过本地哈希及加密掩码安全脱敏。</span>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <h3><i class="fa-solid fa-key text-indigo"></i> 外部接口访问授权密钥 (Collector API Key)</h3>
+              <p class="description">保护您的 LLM 网关接口。如果设置了此密钥，第三方客户端（如 SDK、LangChain）在向代理端点 `/v1` 或 `/v1beta` 发送请求时，必须在 <code>x-collector-key</code> 头或 <code>Authorization Bearer</code> 中携带此 Key 才能获得代理授权。</p>
+              
+              <div class="form-group">
+                <label for="set-collector-key">外部网关 API 密钥 (Collector Key)</label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-shield-halved"></i>
+                  <input type="password" id="set-collector-key" class="form-control" placeholder="当前留空代表允许公开免认证代理">
+                </div>
+                <span class="form-help">如果留空，任何人都可以使用此代理服务。</span>
+              </div>
+            </div>
+
+            <div class="settings-card footer-card">
+              <button id="set-btn-save" class="btn btn-primary">
+                <i class="fa-solid fa-floppy-disk"></i>
+                <span>保存网关配置</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Detailed Log Modal -->
+  <div class="modal-overlay" id="log-modal" style="display: none;">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title-area">
+          <span class="badge badge-accent" id="modal-lbl-status">200 OK</span>
+          <h3 id="modal-lbl-model">model-name</h3>
+          <span class="modal-date" id="modal-lbl-date">Jan 01, 12:00:00 AM</span>
+        </div>
+        <button class="modal-close" id="modal-btn-close">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Metric chips -->
+        <div class="modal-metrics">
+          <div class="metric-chip">
+            <span class="label">运行延迟 (Latency)</span>
+            <span class="value" id="modal-val-duration">0 ms</span>
+          </div>
+          <div class="metric-chip">
+            <span class="label">消耗 Token 总量</span>
+            <span class="value" id="modal-val-tokens">0</span>
+            <span class="sub" id="modal-val-tokens-split">(0 输入 / 0 输出)</span>
+          </div>
+          <div class="metric-chip">
+            <span class="label">通信模式 (Mode)</span>
+            <span class="value" id="modal-val-mode">Streaming (SSE)</span>
+          </div>
+          <div class="metric-chip">
+            <span class="label">目标上游地址 (Upstream)</span>
+            <span class="value" id="modal-val-upstream">https://api.openai.com</span>
+          </div>
+        </div>
+
+        <div class="modal-tabs">
+          <button class="modal-tab active" data-modal-tab="messages">上下文提示词流</button>
+          <button class="modal-tab" data-modal-tab="payloads">原始 HTTP JSON 报文对比</button>
+        </div>
+
+        <!-- Conversation Prompts Tab Content -->
+        <div class="modal-tab-content active" id="modal-content-messages">
+          <div class="prompt-viewer-group">
+            
+            <div id="modal-system-prompt-box" class="prompt-card system">
+              <div class="card-title"><i class="fa-solid fa-gears"></i> 系统预设角色设定 (SYSTEM PROMPT)</div>
+              <pre class="prompt-content" id="modal-system-prompt">未设定角色预设内容。</pre>
+            </div>
+
+            <div class="prompt-card conversation-flow">
+              <div class="card-title"><i class="fa-solid fa-comments"></i> 历史会话消息流 (CHAT MESSAGES HISTORY)</div>
+              <div class="chat-thread" id="modal-chat-thread">
+                <!-- Conversation bubbles will be generated -->
+              </div>
+            </div>
+
+            <div class="prompt-card assistant-completion">
+              <div class="card-title"><i class="fa-solid fa-reply text-emerald"></i> 智能体助手最终回复 (ASSISTANT COMPLETION)</div>
+              <div class="completion-output" id="modal-assistant-completion">
+                <!-- Response text -->
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Raw JSON Payload Tab Content -->
+        <div class="modal-tab-content" id="modal-content-payloads">
+          <div class="payloads-grid">
+            <div class="payload-box">
+              <div class="box-title">
+                <span>客户端 HTTP 请求载荷 (JSON Body)</span>
+                <button class="btn btn-secondary btn-xs btn-copy-json" data-copy-target="modal-json-request"><i class="fa-regular fa-copy"></i> 复制 JSON</button>
+              </div>
+              <pre class="json-code" id="modal-json-request">{}</pre>
+            </div>
+            <div class="payload-box">
+              <div class="box-title">
+                <span>上游模型返回响应载荷 (JSON Response)</span>
+                <button class="btn btn-secondary btn-xs btn-copy-json" data-copy-target="modal-json-response"><i class="fa-regular fa-copy"></i> 复制 JSON</button>
+              </div>
+              <pre class="json-code" id="modal-json-response">{}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="modal-btn-replay" class="btn btn-primary">
+          <i class="fa-solid fa-rotate-right"></i>
+          <span>导入到测试沙盒重试</span>
+        </button>
+        <button id="modal-btn-copy-prompt" class="btn btn-secondary">
+          <i class="fa-regular fa-copy"></i>
+          <span>复制最后提问 Prompt</span>
+        </button>
+        <button id="modal-btn-close-footer" class="btn btn-dark">关闭详情</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gateway Login Overlay (For secured instances) -->
+  <div class="modal-overlay auth-overlay" id="auth-modal" style="display: none;">
+    <div class="modal-container auth-container">
+      <div class="auth-card">
+        <div class="auth-header">
+          <div class="logo-icon-large">
+            <i class="fa-solid fa-bolt-lightning text-glow"></i>
+          </div>
+          <h2>控制面板安全认证</h2>
+          <p>本 PromptPulse 控制台已启用密码验证保护。请输入登录密码以解锁并载入系统运行数据。</p>
+        </div>
+        <div class="auth-body">
+          <div class="form-group">
+            <div class="input-with-icon">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="auth-input-key" class="form-control" placeholder="请输入控制面板登录密码...">
+            </div>
+          </div>
+          <button id="auth-btn-submit" class="btn btn-primary btn-full">
+            <i class="fa-solid fa-unlock-keyhole"></i>
+            <span>验证并解锁会话</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main client controller JS -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
