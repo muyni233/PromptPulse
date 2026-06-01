@@ -732,7 +732,7 @@ app.post('/v1beta/models/:modelAndMethod(*)', async (req, res) => {
   // 3. Determine Upstream URL and Key
   let upstreamUrl = dbService.getSetting('default_gemini_url') || 'http://localhost:3000/mock/v1beta';
   
-  let upstreamKey = req.query.key || req.headers['x-upstream-key'] || req.headers['x-api-key'];
+  let upstreamKey = req.query.key || req.headers['x-goog-api-key'] || req.headers['x-upstream-key'] || req.headers['x-api-key'];
   if (!upstreamKey && req.headers['authorization']?.startsWith('Bearer ')) {
     upstreamKey = req.headers['authorization'].slice(7).trim();
   }
@@ -759,16 +759,35 @@ app.post('/v1beta/models/:modelAndMethod(*)', async (req, res) => {
     cleanUpstreamUrl = cleanUpstreamUrl.slice(0, -7);
   }
 
-  // Construct target Gemini URL
-  const targetEndpoint = `${cleanUpstreamUrl}/v1beta/models/${model}:${method}?key=${upstreamKey}`;
-  console.log(`[Gemini Proxy] Routing request ${requestId} to upstream: ${upstreamUrl}/v1beta/models/${model}:${method} (Stream: ${isStream})`);
+  // Construct target Gemini URL dynamically
+  let targetEndpoint = `${cleanUpstreamUrl}/v1beta/models/${model}:${method}`;
+  if (upstreamKey) {
+    targetEndpoint += `?key=${upstreamKey}`;
+  }
+  console.log(`[Gemini Proxy] Routing request ${requestId} to upstream: ${targetEndpoint} (Stream: ${isStream})`);
+
+  // Prepare Gemini headers
+  const upstreamHeaders = {
+    'Content-Type': 'application/json'
+  };
+
+  if (req.headers['x-goog-api-key']) {
+    upstreamHeaders['x-goog-api-key'] = req.headers['x-goog-api-key'];
+  } else if (upstreamKey) {
+    upstreamHeaders['x-goog-api-key'] = upstreamKey;
+  }
+
+  // Forward other standard Google/client headers
+  for (const key of Object.keys(req.headers)) {
+    if (key.startsWith('x-goog-') && key !== 'x-goog-api-key') {
+      upstreamHeaders[key] = req.headers[key];
+    }
+  }
 
   try {
     const response = await fetch(targetEndpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: upstreamHeaders,
       body: JSON.stringify(req.body),
       signal: req.signal
     });
