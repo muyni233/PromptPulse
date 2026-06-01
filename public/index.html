@@ -339,42 +339,24 @@
 
           <div class="settings-layout">
             <div class="settings-card">
-              <h3><i class="fa-solid fa-share-from-square text-indigo"></i> 默认 OpenAI 兼容上游目标接口设定</h3>
-              <p class="description">当第三方客户端发送 OpenAI 格式请求（`/v1/chat/completions`）且未包含自定义上游密钥时，PromptPulse 将默认转发到以下预设上游并应用此默认密钥。</p>
+              <h3><i class="fa-solid fa-share-from-square text-indigo"></i> OpenAI 兼容上游目标接口设定</h3>
+              <p class="description">大模型网关代理 OpenAI 格式请求（`/v1/chat/completions`）时，会将客户端请求中携带的 API Key（如 Authorization Bearer 密钥）直接透传到以下指定的上游 API 地址。</p>
               
               <div class="form-group">
                 <label for="set-default-url">默认上游 API 地址</label>
                 <input type="text" id="set-default-url" class="form-control" placeholder="https://api.openai.com/v1">
                 <span class="form-help">符合 OpenAI 兼容标准的 API 根地址。例如 <code>https://api.deepseek.com/v1</code>、<code>https://api.openai.com/v1</code></span>
               </div>
-
-              <div class="form-group">
-                <label for="set-default-key">默认上游 API 密钥 (API Key)</label>
-                <div class="input-with-icon">
-                  <i class="fa-solid fa-key"></i>
-                  <input type="password" id="set-default-key" class="form-control" placeholder="未配置任何默认密钥（通常针对公开的本地部署节点）">
-                </div>
-                <span class="form-help">通常以 <code>sk-</code> 开头。密钥已经过安全掩码脱敏存储。</span>
-              </div>
             </div>
 
             <div class="settings-card">
-              <h3><i class="fa-brands fa-google text-indigo"></i> 默认 Google Gemini 上游目标接口设定</h3>
-              <p class="description">当第三方客户端发送 Gemini 格式请求（`/v1beta/models/...`）且未在 URL 中提供自定义 API 密钥参数时，PromptPulse 将默认路由转发到以下预设 Gemini 节点并应用此密钥。</p>
+              <h3><i class="fa-brands fa-google text-indigo"></i> Google Gemini 上游目标接口设定</h3>
+              <p class="description">大模型网关代理 Google Gemini 格式请求（`/v1beta/models/...`）时，会将客户端请求中携带的 `?key=...` 密钥直接透传到以下指定的 Gemini 上游 API 地址。</p>
               
               <div class="form-group">
                 <label for="set-gemini-url">默认 Gemini API 地址</label>
                 <input type="text" id="set-gemini-url" class="form-control" placeholder="https://generativelanguage.googleapis.com">
                 <span class="form-help">Google Gemini API 根地址。例如 <code>https://generativelanguage.googleapis.com</code></span>
-              </div>
-
-              <div class="form-group">
-                <label for="set-gemini-key">默认 Gemini API 密钥 (API Key)</label>
-                <div class="input-with-icon">
-                  <i class="fa-solid fa-key"></i>
-                  <input type="password" id="set-gemini-key" class="form-control" placeholder="未配置任何默认密钥（使用本地 Mock 或公开节点）">
-                </div>
-                <span class="form-help">您的 Google AI Studio API 密钥。密钥已经过安全掩码脱敏存储。</span>
               </div>
             </div>
 

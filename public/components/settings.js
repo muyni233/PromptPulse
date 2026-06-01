@@ -26,27 +26,8 @@ export const SettingsComponent = {
 
       // Populate elements
       document.getElementById('set-default-url').value = settings.default_upstream_url || '';
-      
-      const keyInput = document.getElementById('set-default-key');
-      if (settings.default_upstream_key_masked) {
-        keyInput.value = settings.default_upstream_key_masked;
-        keyInput.placeholder = '••••••••••••••••••••••••';
-      } else {
-        keyInput.value = '';
-        keyInput.placeholder = '未配置任何默认密钥（通常针对公开的本地部署节点）';
-      }
-
       document.getElementById('set-gemini-url').value = settings.default_gemini_url || '';
       
-      const geminiKeyInput = document.getElementById('set-gemini-key');
-      if (settings.default_gemini_key_masked) {
-        geminiKeyInput.value = settings.default_gemini_key_masked;
-        geminiKeyInput.placeholder = '••••••••••••••••••••••••';
-      } else {
-        geminiKeyInput.value = '';
-        geminiKeyInput.placeholder = '未配置任何默认密钥（使用本地 Mock 或公开节点）';
-      }
-
       const dbPasswordInput = document.getElementById('set-dashboard-password');
       if (settings.has_dashboard_password) {
         dbPasswordInput.value = '••••••••••••••••••••••••';
@@ -71,20 +52,16 @@ export const SettingsComponent = {
       console.error(err);
     }
   },
-
+ 
   async saveSettings() {
     const saveBtn = document.getElementById('set-btn-save');
     const defaultUrl = document.getElementById('set-default-url').value.trim();
-    const defaultKey = document.getElementById('set-default-key').value.trim();
     const geminiUrl = document.getElementById('set-gemini-url').value.trim();
-    const geminiKey = document.getElementById('set-gemini-key').value.trim();
     const dbPassword = document.getElementById('set-dashboard-password').value.trim();
-
+ 
     const payload = {
       default_upstream_url: defaultUrl,
-      default_upstream_key: defaultKey,
       default_gemini_url: geminiUrl,
-      default_gemini_key: geminiKey,
       dashboard_password: dbPassword
     };
 

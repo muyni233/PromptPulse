@@ -94,7 +94,7 @@ curl -X POST "http://localhost:3000/v1beta/models/gemini-2.5-flash:generateConte
 
 通过控制面板的 **“全局设置”** (Settings)，你可以：
 1. **控制面板登录密码**：设置后，访问网页 Dashboard 必须输入密码解锁，保证本地调试日志的隐私性。
-2. **默认上游网关**：配置默认的上游 API Base URL 和 API 密钥（如默认的 OpenAI / Gemini 官方链接）。当你的客户端请求头中未显式包含 API 密钥时，网关将使用此处配置的全局默认密钥完成调用。
+2. **默认上游地址**：配置默认的 OpenAI / Gemini 目标接口根地址。网关在代理解析请求时，会直接将请求透传至该目标地址，并直接提取和使用客户端请求中携带的 API Key 密钥进行认证。
 
 ---
 

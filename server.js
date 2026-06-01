@@ -376,13 +376,11 @@ app.post('/v1/chat/completions', async (req, res) => {
 
   // 2. Determine Upstream URL and Key
   let upstreamUrl = dbService.getSetting('default_upstream_url');
-  let upstreamKey = req.headers['x-upstream-key'] || dbService.getSetting('default_upstream_key');
-
-  // Fallback: If no explicit upstream key, and Authorization header exists, use it as upstream key
+  
+  let upstreamKey = req.headers['x-upstream-key'] || req.headers['x-api-key'];
   const authHeader = req.headers['authorization'];
   if (!upstreamKey && authHeader && authHeader.startsWith('Bearer ')) {
-    const bearerKey = authHeader.slice(7).trim();
-    upstreamKey = bearerKey;
+    upstreamKey = authHeader.slice(7).trim();
   }
 
   if (!upstreamUrl) {
@@ -733,7 +731,11 @@ app.post('/v1beta/models/:modelAndMethod(*)', async (req, res) => {
 
   // 3. Determine Upstream URL and Key
   let upstreamUrl = dbService.getSetting('default_gemini_url') || 'http://localhost:3000/mock/v1beta';
-  let upstreamKey = req.query.key || req.headers['x-upstream-key'] || dbService.getSetting('default_gemini_key');
+  
+  let upstreamKey = req.query.key || req.headers['x-upstream-key'] || req.headers['x-api-key'];
+  if (!upstreamKey && req.headers['authorization']?.startsWith('Bearer ')) {
+    upstreamKey = req.headers['authorization'].slice(7).trim();
+  }
 
   if (!upstreamUrl) {
     return res.status(400).json({ error: 'Upstream URL not configured' });
@@ -1063,13 +1065,9 @@ app.get('/api/stats', authorizeDashboard, (req, res) => {
 app.get('/api/settings', authorizeDashboard, (req, res) => {
   try {
     const settings = dbService.getSettings();
-    
-    // Mask sensitive keys before returning
     res.json({
       default_upstream_url: settings.default_upstream_url || '',
-      default_upstream_key_masked: maskKey(settings.default_upstream_key),
       default_gemini_url: settings.default_gemini_url || '',
-      default_gemini_key_masked: maskKey(settings.default_gemini_key),
       has_dashboard_password: !!(settings.dashboard_password && settings.dashboard_password.trim() !== '')
     });
   } catch (e) {
@@ -1081,36 +1079,15 @@ app.get('/api/settings', authorizeDashboard, (req, res) => {
 app.post('/api/settings', authorizeDashboard, (req, res) => {
   try {
     const newSettings = req.body;
-    const currentSettings = dbService.getSettings();
     const updateObj = {};
 
     if (newSettings.default_upstream_url !== undefined) {
       updateObj.default_upstream_url = newSettings.default_upstream_url;
     }
 
-    // Only update key if it has actually changed and is not the masked placeholder
-    if (newSettings.default_upstream_key !== undefined) {
-      const trimmedKey = newSettings.default_upstream_key.trim();
-      if (trimmedKey !== '' && !trimmedKey.includes('...')) {
-        updateObj.default_upstream_key = trimmedKey;
-      } else if (trimmedKey === '') {
-        updateObj.default_upstream_key = '';
-      }
-    }
-
     if (newSettings.default_gemini_url !== undefined) {
       updateObj.default_gemini_url = newSettings.default_gemini_url;
     }
-
-    if (newSettings.default_gemini_key !== undefined) {
-      const trimmedKey = newSettings.default_gemini_key.trim();
-      if (trimmedKey !== '' && !trimmedKey.includes('...')) {
-        updateObj.default_gemini_key = trimmedKey;
-      } else if (trimmedKey === '') {
-        updateObj.default_gemini_key = '';
-      }
-    }
-
 
     if (newSettings.dashboard_password !== undefined) {
       const trimmedKey = newSettings.dashboard_password.trim();
