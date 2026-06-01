@@ -47,15 +47,6 @@ export const SettingsComponent = {
         geminiKeyInput.placeholder = '未配置任何默认密钥（使用本地 Mock 或公开节点）';
       }
 
-      const collectorKeyInput = document.getElementById('set-collector-key');
-      if (settings.has_collector_key) {
-        collectorKeyInput.value = '••••••••••••••••••••••••';
-        collectorKeyInput.placeholder = '外部网关 API 密钥已配置';
-      } else {
-        collectorKeyInput.value = '';
-        collectorKeyInput.placeholder = '当前留空代表允许公开免认证代理';
-      }
-
       const dbPasswordInput = document.getElementById('set-dashboard-password');
       if (settings.has_dashboard_password) {
         dbPasswordInput.value = '••••••••••••••••••••••••';
@@ -87,7 +78,6 @@ export const SettingsComponent = {
     const defaultKey = document.getElementById('set-default-key').value.trim();
     const geminiUrl = document.getElementById('set-gemini-url').value.trim();
     const geminiKey = document.getElementById('set-gemini-key').value.trim();
-    const collectorKey = document.getElementById('set-collector-key').value.trim();
     const dbPassword = document.getElementById('set-dashboard-password').value.trim();
 
     const payload = {
@@ -95,7 +85,6 @@ export const SettingsComponent = {
       default_upstream_key: defaultKey,
       default_gemini_url: geminiUrl,
       default_gemini_key: geminiKey,
-      collector_api_key: collectorKey,
       dashboard_password: dbPassword
     };
 

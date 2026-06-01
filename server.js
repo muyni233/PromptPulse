@@ -93,30 +93,6 @@ function parseGeminiStreamChunk(chunkText) {
   return '';
 }
 
-// Authorization middleware for Collector
-function authorizeCollector(req, res, next) {
-  const collectorKey = dbService.getSetting('collector_api_key');
-  if (!collectorKey || collectorKey.trim() === '') {
-    return next(); // Security disabled
-  }
-
-  const clientKey = req.headers['x-collector-key'] || req.headers['x-api-key'];
-  if (clientKey === collectorKey) {
-    return next();
-  }
-
-  // Also check standard Bearer authorization header if it matches the collector key
-  const authHeader = req.headers['authorization'];
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const bearerKey = authHeader.slice(7).trim();
-    if (bearerKey === collectorKey) {
-      return next();
-    }
-  }
-
-  return res.status(401).json({ error: 'Unauthorized: Invalid Collector API Key' });
-}
-
 // Authorization middleware for Dashboard visual control panel
 function authorizeDashboard(req, res, next) {
   const dbPassword = dbService.getSetting('dashboard_password');
@@ -398,26 +374,6 @@ app.post('/v1/chat/completions', async (req, res) => {
     return res.status(400).json({ error: 'Invalid request: messages must be an array' });
   }
 
-  // 1. Authenticate collector if key is configured
-  const collectorKey = dbService.getSetting('collector_api_key');
-  if (collectorKey && collectorKey.trim() !== '') {
-    const clientKey = req.headers['x-collector-key'] || req.headers['x-api-key'];
-    let authorized = (clientKey === collectorKey);
-    
-    // Check Authorization header ONLY if it matches the collectorKey (in case client is forwarding their own key)
-    const authHeader = req.headers['authorization'];
-    if (!authorized && authHeader && authHeader.startsWith('Bearer ')) {
-      const bearerKey = authHeader.slice(7).trim();
-      if (bearerKey === collectorKey) {
-        authorized = true;
-      }
-    }
-
-    if (!authorized) {
-      return res.status(401).json({ error: 'Unauthorized collector access' });
-    }
-  }
-
   // 2. Determine Upstream URL and Key
   let upstreamUrl = dbService.getSetting('default_upstream_url');
   let upstreamKey = req.headers['x-upstream-key'] || dbService.getSetting('default_upstream_key');
@@ -426,10 +382,7 @@ app.post('/v1/chat/completions', async (req, res) => {
   const authHeader = req.headers['authorization'];
   if (!upstreamKey && authHeader && authHeader.startsWith('Bearer ')) {
     const bearerKey = authHeader.slice(7).trim();
-    // Only use if it is not the collector's own key
-    if (bearerKey !== collectorKey) {
-      upstreamKey = bearerKey;
-    }
+    upstreamKey = bearerKey;
   }
 
   if (!upstreamUrl) {
@@ -762,14 +715,6 @@ app.post('/v1beta/models/:modelAndMethod(*)', async (req, res) => {
   const method = pathParam.substring(colonIndex + 1); // 'generateContent' or 'streamGenerateContent'
   const isStream = method.startsWith('stream');
 
-  // 1. Authenticate collector key
-  const collectorKey = dbService.getSetting('collector_api_key');
-  if (collectorKey && collectorKey.trim() !== '') {
-    const clientKey = req.headers['x-collector-key'] || req.headers['x-api-key'] || req.query.collector_key;
-    if (clientKey !== collectorKey) {
-      return res.status(401).json({ error: 'Unauthorized: Invalid Collector API Key' });
-    }
-  }
 
   // 2. Map Gemini body to Standard Messages format for Database storage
   const systemPrompt = req.body.systemInstruction?.parts?.map(p => p.text).join('') || '';
@@ -1125,7 +1070,6 @@ app.get('/api/settings', authorizeDashboard, (req, res) => {
       default_upstream_key_masked: maskKey(settings.default_upstream_key),
       default_gemini_url: settings.default_gemini_url || '',
       default_gemini_key_masked: maskKey(settings.default_gemini_key),
-      has_collector_key: !!(settings.collector_api_key && settings.collector_api_key.trim() !== ''),
       has_dashboard_password: !!(settings.dashboard_password && settings.dashboard_password.trim() !== '')
     });
   } catch (e) {
@@ -1167,15 +1111,6 @@ app.post('/api/settings', authorizeDashboard, (req, res) => {
       }
     }
 
-    if (newSettings.collector_api_key !== undefined) {
-      const trimmedKey = newSettings.collector_api_key.trim();
-      // If client sent exact empty string, we clear security
-      if (trimmedKey === '') {
-        updateObj.collector_api_key = '';
-      } else if (!trimmedKey.includes('...')) {
-        updateObj.collector_api_key = trimmedKey;
-      }
-    }
 
     if (newSettings.dashboard_password !== undefined) {
       const trimmedKey = newSettings.dashboard_password.trim();

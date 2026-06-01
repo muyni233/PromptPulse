@@ -392,20 +392,6 @@
               </div>
             </div>
 
-            <div class="settings-card">
-              <h3><i class="fa-solid fa-key text-indigo"></i> 外部接口访问授权密钥 (Collector API Key)</h3>
-              <p class="description">保护您的 LLM 网关接口。如果设置了此密钥，第三方客户端（如 SDK、LangChain）在向代理端点 `/v1` 或 `/v1beta` 发送请求时，必须在 <code>x-collector-key</code> 头或 <code>Authorization Bearer</code> 中携带此 Key 才能获得代理授权。</p>
-              
-              <div class="form-group">
-                <label for="set-collector-key">外部网关 API 密钥 (Collector Key)</label>
-                <div class="input-with-icon">
-                  <i class="fa-solid fa-shield-halved"></i>
-                  <input type="password" id="set-collector-key" class="form-control" placeholder="当前留空代表允许公开免认证代理">
-                </div>
-                <span class="form-help">如果留空，任何人都可以使用此代理服务。</span>
-              </div>
-            </div>
-
             <div class="settings-card footer-card">
               <button id="set-btn-save" class="btn btn-primary">
                 <i class="fa-solid fa-floppy-disk"></i>
