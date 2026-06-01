@@ -24,3 +24,6 @@ prompt_pulse.db-shm
 # Operating System files
 .DS_Store
 Thumbs.db
+
+# Scratch and test files
+scratch/
